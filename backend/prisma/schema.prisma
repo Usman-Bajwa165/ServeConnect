@@ -1,0 +1,108 @@
+// This is your Prisma schema file
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SERVICE_PROVIDER
+  SERVICE_AVAILER
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  fullName  String
+  role      Role
+  city      String?
+  isBanned  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  providerServices  Service[]      @relation("ProviderServices")
+  availerPostings   AvailRequest[] @relation("AvailRequest")
+  applicationsGiven Application[]  @relation("ApplicantUser")
+  reviewsGiven      Review[]       @relation("ReviewAuthor")
+  reviewsReceived   Review[]       @relation("ReviewTarget")
+}
+
+model Service {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  price       Decimal  @db.Decimal(10, 2)
+  location    String
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  providerId String
+  provider   User   @relation("ProviderServices", fields: [providerId], references: [id])
+
+  applications Application[] @relation("ServiceApplications")
+}
+
+model AvailRequest {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  price       Decimal  @db.Decimal(10, 2)
+  location    String
+  isReserved  Boolean  @default(false)
+  isDeleted   Boolean  @default(false)
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  availerId String
+  availer   User   @relation("AvailRequest", fields: [availerId], references: [id])
+
+  applications Application[] @relation("AvailRequestApplications")
+}
+
+model Application {
+  id            String            @id @default(uuid())
+  note          String
+  contactNumber String
+  status        ApplicationStatus @default(PENDING)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  applicantId String
+  applicant   User   @relation("ApplicantUser", fields: [applicantId], references: [id])
+
+  serviceId String?
+  service   Service? @relation("ServiceApplications", fields: [serviceId], references: [id])
+
+  availRequestId String?
+  availRequest   AvailRequest? @relation("AvailRequestApplications", fields: [availRequestId], references: [id])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now())
+
+  authorId String
+  author   User   @relation("ReviewAuthor", fields: [authorId], references: [id])
+
+  targetId String
+  target   User   @relation("ReviewTarget", fields: [targetId], references: [id])
+
+  @@unique([authorId, targetId])
+}
