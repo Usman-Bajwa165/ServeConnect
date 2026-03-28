@@ -24,13 +24,25 @@ export class UsersController {
     return this.usersService.getMe(user.id);
   }
 
+  @Get("me/full-profile")
+  getMyFullProfile(@CurrentUser() user: any) {
+    return this.usersService.getMyFullProfile(user.id, user.role);
+  }
+
+  @Get("me/stats")
+  getStats(@CurrentUser() user: any) {
+    return this.usersService.getStats(user.id, user.role);
+  }
+
   @Roles(Role.SERVICE_AVAILER, Role.ADMIN)
   @Get("providers")
   getProviders(
+    @Query("search") search: string,
+    @Query("city") city: string,
     @Query("page", new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query("limit", new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
-    return this.usersService.getProviders(page, limit);
+    return this.usersService.getProviders(search, city, page, limit);
   }
 
   @Roles(Role.SERVICE_PROVIDER, Role.ADMIN)

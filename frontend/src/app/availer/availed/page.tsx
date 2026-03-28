@@ -37,17 +37,16 @@ export default function AvailedServicesPage() {
     fetchApplications();
   }, []);
 
-  const handleMarkComplete = async (reqId: string) => {
+  const handleMarkComplete = async (appId: string) => {
     if (
       !confirm(
-        "Are you sure you want to mark this task as completed? This represents an AvailRequest that this provider accepted.",
+        "Are you sure you want to mark this task as completed? This will allow you to leave a review for the professional.",
       )
     )
       return;
-    setCompleteLoading(reqId);
+    setCompleteLoading(appId);
     try {
-      await axios.post(`/avail-requests/${reqId}/complete`);
-      alert("Task marked as completed!");
+      await axios.patch(`/applications/${appId}/complete`);
       fetchApplications();
     } catch (err: any) {
       alert(err.response?.data?.error || "Failed to complete task");
@@ -56,8 +55,8 @@ export default function AvailedServicesPage() {
     }
   };
 
-  const openReviewModal = (provider: any) => {
-    setReviewTarget(provider);
+  const openReviewModal = (provider: any, applicationId: string) => {
+    setReviewTarget({ ...provider, applicationId });
     setRating(5);
     setComment("");
     setReviewError("");
@@ -71,10 +70,10 @@ export default function AvailedServicesPage() {
     try {
       await axios.post("/reviews", {
         targetId: reviewTarget.id,
+        applicationId: reviewTarget.applicationId,
         rating,
         comment,
       });
-      alert("Review posted successfully!");
       setReviewModalOpen(false);
       fetchApplications();
     } catch (err: any) {
@@ -83,123 +82,177 @@ export default function AvailedServicesPage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-          Availed Services
-        </h1>
-        <p className="mt-2 text-gray-600">
-          These are properties and services you have applied for, and the
-          provider has ACCEPTED your application.
-        </p>
-      </div>
-
+    <DashboardLayout
+      title="Availed Services"
+      subtitle="Track your active and completed collaborations."
+    >
       <AvailerNavTabs />
 
-      {loading ? (
-        <div className="flexjustify-center py-20">
-          <div className="animate-pulse space-y-4 max-w-4xl mx-auto w-full">
+      <div className="p-6 lg:p-10 max-w-5xl mx-auto w-full">
+        {loading ? (
+          <div className="space-y-4 w-full">
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-40 bg-white/50 border-gray-100 rounded-xl border-dashed border-2"
+                className="h-40 bg-white/50 border-gray-100 rounded-xl border-dashed border-2 animate-pulse"
               ></div>
             ))}
           </div>
-        </div>
-      ) : applications.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center border-dashed border-2 border-gray-200">
-          <svg
-            className="mx-auto h-16 w-16 text-gray-300 mb-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1}
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <h3 className="text-xl font-medium text-gray-900 mb-2">
-            No accepted services yet
-          </h3>
-          <p className="text-gray-500 max-w-md mx-auto">
-            When a provider accepts your application to their service, it will
-            appear here so you can leave a review after completion.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-6 max-w-4xl mx-auto animate-fade-in">
-          {applications.map((app) => (
-            <Card
-              key={app.id}
-              className="border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
+        ) : applications.length === 0 ? (
+          <div className="bg-white rounded-2xl p-12 text-center border-dashed border-2 border-gray-200">
+            <svg
+              className="mx-auto h-16 w-16 text-gray-300 mb-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              <div className="flex flex-col md:flex-row h-full">
-                <div className="bg-gray-50 p-6 md:w-1/3 border-b md:border-b-0 md:border-r border-gray-100 flex flex-col justify-center">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-brand-100 text-brand-700 flex justify-center items-center font-bold text-lg">
-                      {app.service.provider.fullName.charAt(0)}
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <h3 className="text-xl font-medium text-gray-900 mb-2">
+              No active collaborations
+            </h3>
+            <p className="text-gray-500 max-w-md mx-auto">
+              Once a service application is accepted, or you accept a provider
+              for your request, it will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6 animate-fade-in">
+            {applications.map((app) => {
+              const isService = !!app.service;
+              const item = isService ? app.service : app.availRequest;
+              const provider = isService ? item.provider : app.applicant;
+              const isCompleted = app.isCompleted;
+
+              return (
+                <Card
+                  key={app.id}
+                  className={`border border-gray-100 shadow-sm hover:shadow-md transition-all ${isCompleted ? "opacity-90 grayscale-[0.2]" : ""}`}
+                >
+                  <div className="flex flex-col md:flex-row h-full">
+                    <div className="bg-gray-50 p-6 md:w-1/3 border-b md:border-b-0 md:border-r border-gray-100 flex flex-col justify-center">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-12 h-12 rounded-full bg-brand-100 text-brand-700 flex justify-center items-center font-bold text-lg border-2 border-white shadow-sm">
+                          {provider.fullName.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase text-gray-500 font-bold tracking-widest leading-none mb-1">
+                            Professional
+                          </p>
+                          <p className="font-bold text-gray-900 leading-tight">
+                            {provider.fullName}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2 mt-auto">
+                        {isCompleted ? (
+                          app.reviewGiven ? (
+                            <div className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-green-50 border border-green-100 text-green-700 text-xs font-black uppercase tracking-widest">
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                              </svg>
+                              Reviewed
+                            </div>
+                          ) : (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              className="w-full justify-center shadow-sm"
+                              onClick={() => openReviewModal(provider, app.id)}
+                            >
+                              Post Review
+                            </Button>
+                          )
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-center text-xs font-black text-green-600 hover:bg-green-50 uppercase tracking-widest"
+                            isLoading={completeLoading === app.id}
+                            onClick={() => handleMarkComplete(app.id)}
+                          >
+                            Mark Completed
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs uppercase text-gray-500 font-semibold tracking-wider">
-                        Provider
-                      </p>
-                      <p className="font-bold text-gray-900 leading-tight">
-                        {app.service.provider.fullName}
-                      </p>
+
+                    <div className="p-6 md:w-2/3 flex flex-col">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex gap-2">
+                          <Badge
+                            variant={isCompleted ? "success" : "info"}
+                            className={`px-3 py-0.5 rounded-full uppercase tracking-tighter text-[9px] font-black ${isCompleted ? "bg-green-100 text-green-700" : "bg-brand-100 text-brand-700"}`}
+                          >
+                            {isCompleted ? "Completed" : "Active / Accepted"}
+                          </Badge>
+                          <Badge
+                            variant="gray"
+                            className="px-3 py-0.5 rounded-full uppercase tracking-tighter text-[9px] font-black border-gray-200 text-gray-400"
+                          >
+                            {isService ? "Service" : "Custom Job"}
+                          </Badge>
+                        </div>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                          {new Date(app.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+
+                      <h3 className="text-xl font-black text-gray-900 mb-1 tracking-tight">
+                        {item.title}
+                      </h3>
+
+                      <div className="mt-4 bg-white rounded-xl p-4 border border-gray-100 shadow-inner flex-1">
+                        <p className="text-[10px] uppercase font-black text-brand-600 tracking-widest mb-2 opacity-60">
+                          Notes & Contact
+                        </p>
+                        <p className="text-gray-700 text-sm italic mb-4 leading-relaxed bg-gray-50 p-3 rounded-lg border border-gray-100">
+                          {`"${app.note}"`}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-brand-50 rounded-md">
+                              <svg
+                                className="w-4 h-4 text-brand-600"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                />
+                              </svg>
+                            </div>
+                            <span className="font-mono text-sm font-bold text-gray-900">
+                              {app.contactNumber}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase leading-none mb-1">
+                              Price
+                            </p>
+                            <p className="font-black text-lg text-brand-600">
+                              ₨ {Number(item.price).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 mt-auto">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-center shadow-sm"
-                      onClick={() => openReviewModal(app.service.provider)}
-                    >
-                      Leave Review
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="p-6 md:w-2/3">
-                  <div className="flex justify-between items-start mb-2">
-                    <Badge variant="success" className="mb-2">
-                      Accepted
-                    </Badge>
-                    <span className="text-sm text-gray-500 font-medium">
-                      Applied {new Date(app.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">
-                    {app.service.title}
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed">
-                    {app.service.description}
-                  </p>
-
-                  <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100 -mx-2">
-                    <p className="text-xs uppercase font-semibold text-blue-800 tracking-wider mb-2">
-                      Your Application Note
-                    </p>
-                    <p className="text-blue-900 text-sm italic border-l-2 border-blue-300 pl-3 py-1">{`"${app.note}"`}</p>
-                    <div className="w-full h-px bg-blue-100 my-3"></div>
-                    <p className="text-xs font-semibold text-blue-800">
-                      Provided Contact:{" "}
-                      <span className="font-mono bg-white px-2 py-0.5 rounded shadow-sm inline-block ml-1">
-                        {app.contactNumber}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <Modal
         isOpen={reviewModalOpen}
@@ -215,22 +268,22 @@ export default function AvailedServicesPage() {
             )}
 
             <div className="bg-gray-50 p-4 rounded-lg flex items-center gap-4 mb-2">
-              <div className="w-10 h-10 rounded-full bg-brand-200 flex justify-center items-center font-bold text-brand-800">
+              <div className="w-10 h-10 rounded-full bg-brand-200 flex justify-center items-center font-black text-brand-800 border-2 border-white shadow-sm">
                 {reviewTarget.fullName.charAt(0)}
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-500 leading-none">
-                  Reviewing Provider
+                <p className="text-[10px] uppercase font-bold text-gray-400 leading-none mb-1 tracking-widest">
+                  Reviewing Professional
                 </p>
-                <p className="text-lg font-bold text-gray-900">
+                <p className="text-lg font-black text-gray-900 tracking-tight">
                   {reviewTarget.fullName}
                 </p>
               </div>
             </div>
 
             <div className="flex flex-col items-center py-4">
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Rating
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-4">
+                Star Rating
               </label>
               <div className="flex gap-2">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -241,7 +294,7 @@ export default function AvailedServicesPage() {
                     className="focus:outline-none focus:ring-2 focus:ring-brand-500 rounded-full transform transition-transform hover:scale-110 active:scale-95"
                   >
                     <svg
-                      className={`w-12 h-12 transition-colors ${star <= rating ? "text-yellow-400" : "text-gray-200 hover:text-yellow-200"}`}
+                      className={`w-12 h-12 transition-colors ${star <= rating ? "text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.3)]" : "text-gray-100 hover:text-yellow-200"}`}
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -253,16 +306,16 @@ export default function AvailedServicesPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Comment
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">
+                Your Feedback
               </label>
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-brand-500 focus:border-brand-500 bg-white"
+                className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 bg-white shadow-sm font-medium text-gray-800"
                 rows={4}
                 required
-                placeholder="Share details of your experience with this provider..."
+                placeholder="How was the service? Your review helps the community."
               />
             </div>
 
@@ -274,7 +327,9 @@ export default function AvailedServicesPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit">Submit Review</Button>
+              <Button type="submit" className="font-bold">
+                Submit Review
+              </Button>
             </div>
           </form>
         )}

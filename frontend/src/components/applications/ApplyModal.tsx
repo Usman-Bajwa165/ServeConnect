@@ -1,72 +1,102 @@
-import React, { useState } from 'react';
-import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { AiSuggestionInput } from '@/components/ai/AiSuggestionInput';
-import axios from '@/lib/axios';
+import React, { useState } from "react";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { AiSuggestionInput } from "@/components/ai/AiSuggestionInput";
+import axios from "@/lib/axios";
 
 interface ApplyModalProps {
   isOpen: boolean;
   onClose: () => void;
   targetId: string;
   targetTitle: string;
-  type: 'service' | 'avail-request';
+  type: "service" | "avail-request";
   onSuccess: () => void;
 }
 
-export const ApplyModal = ({ isOpen, onClose, targetId, targetTitle, type, onSuccess }: ApplyModalProps) => {
+import { startGlobalLoading, stopGlobalLoading } from "@/lib/events";
+
+export const ApplyModal = ({
+  isOpen,
+  onClose,
+  targetId,
+  targetTitle,
+  type,
+  onSuccess,
+}: ApplyModalProps) => {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  
-  const [note, setNote] = useState('');
-  const [contactNumber, setContactNumber] = useState('');
+  const [error, setError] = useState("");
+  const [isFixingGrammar, setIsFixingGrammar] = useState(false);
+
+  const [note, setNote] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
 
   const formatPhoneNumber = (value: string) => {
     // Strip non-digits
-    const digits = value.replace(/\D/g, '');
-    let formatted = '';
-    
-    // Pakistani format: +92 3XX XXXXXXX
-    // The user types: 3123456789
-    // Store in state as just the digits (max 10), pad with the prefix
-    
+    const digits = value.replace(/\D/g, "");
+    let formatted = "";
+
     if (digits.length > 0) {
       if (digits.length <= 3) formatted = digits;
       else formatted = `${digits.slice(0, 3)} ${digits.slice(3, 10)}`;
     }
-    
+
     setContactNumber(formatted);
+  };
+
+  const handleNoteBlur = async () => {
+    if (!note.trim()) return;
+    setIsFixingGrammar(true);
+    try {
+      const res = await axios.post("/ai/suggest", {
+        type: "grammar",
+        text: note,
+      });
+      if (res.data?.data?.suggestion) {
+        setNote(res.data.data.suggestion);
+      }
+    } catch (err) {
+      console.warn("Grammar check failed");
+    } finally {
+      setIsFixingGrammar(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    startGlobalLoading();
+    setError("");
 
     const fullContact = `+92 ${contactNumber}`;
-    
+
     if (!/^\+92 \d{3} \d{7}$/.test(fullContact)) {
-      setError('Invalid contact format. Use 3XX XXXXXXX');
+      setError("Invalid contact format. Use 3XX XXXXXXX");
       setLoading(false);
+      stopGlobalLoading();
       return;
     }
 
     try {
-      const endpoint = type === 'service' 
-        ? `/services/${targetId}/apply` 
-        : `/avail-requests/${targetId}/apply`;
-        
+      const endpoint =
+        type === "service"
+          ? `/services/${targetId}/apply`
+          : `/avail-requests/${targetId}/apply`;
+
       await axios.post(endpoint, {
         note,
-        contactNumber: fullContact
+        contactNumber: fullContact,
       });
-      
+
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to apply. Please try again.');
+      setError(
+        err.response?.data?.error || "Failed to apply. Please try again.",
+      );
     } finally {
       setLoading(false);
+      stopGlobalLoading();
     }
   };
 
@@ -79,14 +109,41 @@ export const ApplyModal = ({ isOpen, onClose, targetId, targetTitle, type, onSuc
           </div>
         )}
 
-        <AiSuggestionInput
-          label="Application Note"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          contextType="continuation"
-          placeholder="Briefly describe why you are a good fit..."
-          required
-        />
+        <div className="relative">
+          <AiSuggestionInput
+            label="Application Note"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            onBlur={handleNoteBlur}
+            contextType="continuation"
+            placeholder="Briefly describe why you are a good fit..."
+            required
+          />
+          {isFixingGrammar && (
+            <div className="absolute top-0 right-0 mt-1 mr-2 flex items-center gap-1.5 text-[10px] font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded border border-brand-100 animate-pulse">
+              <svg
+                className="w-3 h-3 animate-spin"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              AI Checking Grammar...
+            </div>
+          )}
+        </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -106,7 +163,9 @@ export const ApplyModal = ({ isOpen, onClose, targetId, targetTitle, type, onSuc
               maxLength={11} // 10 digits + 1 space
             />
           </div>
-          <p className="mt-1 text-xs text-gray-500">Press tab while typing the note to autocomplete with AI.</p>
+          <p className="mt-1 text-xs text-gray-500">
+            Press tab while typing the note to autocomplete with AI.
+          </p>
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">

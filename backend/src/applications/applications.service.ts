@@ -4,13 +4,20 @@ import {
   ForbiddenException,
   ConflictException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ApplyDto } from "./dto/apply.dto";
+import { NotificationsService } from "../notifications/notifications.service";
 
 @Injectable()
 export class ApplicationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => NotificationsService))
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   // Provider applies to an Availer's AvailRequest
   async applyToAvailRequest(
@@ -31,14 +38,23 @@ export class ApplicationsService {
     if (existing)
       throw new ConflictException("You have already applied to this request");
 
-    return this.prisma.application.create({
+    const app = await this.prisma.application.create({
       data: {
         note: dto.note,
         contactNumber: dto.contactNumber,
         applicantId,
         availRequestId,
       },
+      include: { applicant: true },
     });
+
+    await this.notificationsService.create({
+      userId: req.availerId,
+      title: "New Application",
+      message: `${app.applicant.fullName} applied to your request "${req.title}".`,
+    });
+
+    return app;
   }
 
   // Availer applies to a Provider's Service
@@ -54,14 +70,23 @@ export class ApplicationsService {
     if (existing)
       throw new ConflictException("You have already applied to this service");
 
-    return this.prisma.application.create({
+    const app = await this.prisma.application.create({
       data: {
         note: dto.note,
         contactNumber: dto.contactNumber,
         applicantId,
         serviceId,
       },
+      include: { applicant: true },
     });
+
+    await this.notificationsService.create({
+      userId: service.providerId,
+      title: "New Application",
+      message: `${app.applicant.fullName} applied to your service "${service.title}".`,
+    });
+
+    return app;
   }
 
   // Get applications for an AvailRequest (availer owner only)
@@ -141,6 +166,12 @@ export class ApplicationsService {
       data: { isReserved: true },
     });
 
+    await this.notificationsService.create({
+      userId: app.applicantId,
+      title: "Application Accepted!",
+      message: `Your application to "${req.title}" was accepted.`,
+    });
+
     return { message: "Application accepted and request reserved" };
   }
 
@@ -156,10 +187,18 @@ export class ApplicationsService {
     if (!req) throw new NotFoundException("Avail request not found");
     if (req.availerId !== userId) throw new ForbiddenException("Access denied");
 
-    return this.prisma.application.update({
+    const updated = await this.prisma.application.update({
       where: { id: appId },
       data: { status: "REJECTED" },
     });
+
+    await this.notificationsService.create({
+      userId: updated.applicantId,
+      title: "Application Rejected",
+      message: `Your application to "${req.title}" was declined.`,
+    });
+
+    return updated;
   }
 
   // Accept application to Service (provider owner) — does NOT hide service
@@ -175,10 +214,18 @@ export class ApplicationsService {
     if (service.providerId !== userId)
       throw new ForbiddenException("Access denied");
 
-    return this.prisma.application.update({
+    const app = await this.prisma.application.update({
       where: { id: appId },
       data: { status: "ACCEPTED" },
     });
+
+    await this.notificationsService.create({
+      userId: app.applicantId,
+      title: "Application Accepted",
+      message: `Your application to "${service.title}" was accepted!`,
+    });
+
+    return app;
   }
 
   // Reject application to Service (provider owner)
@@ -194,19 +241,35 @@ export class ApplicationsService {
     if (service.providerId !== userId)
       throw new ForbiddenException("Access denied");
 
-    return this.prisma.application.update({
+    const app = await this.prisma.application.update({
       where: { id: appId },
       data: { status: "REJECTED" },
     });
+
+    await this.notificationsService.create({
+      userId: app.applicantId,
+      title: "Application Rejected",
+      message: `Your application to "${service.title}" was declined.`,
+    });
+
+    return app;
   }
 
   // Get pending jobs for a provider (accepted applications)
   async getProviderPendingJobs(providerId: string) {
-    return this.prisma.application.findMany({
+    const jobs = await this.prisma.application.findMany({
       where: {
-        applicantId: providerId,
         status: "ACCEPTED",
-        availRequest: { isCompleted: false },
+        OR: [
+          {
+            applicantId: providerId,
+            availRequestId: { not: null },
+          },
+          {
+            service: { providerId: providerId },
+            serviceId: { not: null },
+          },
+        ],
       },
       include: {
         availRequest: {
@@ -215,18 +278,39 @@ export class ApplicationsService {
           },
         },
         service: true,
+        applicant: {
+          select: { id: true, fullName: true, city: true },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
+
+    return Promise.all(
+      jobs.map(async (job) => {
+        if (!job.isCompleted) return { ...job, reviewGiven: false };
+        const review = await this.prisma.review.findUnique({
+          where: { authorId_applicationId: { authorId: providerId, applicationId: job.id } },
+        });
+        return { ...job, reviewGiven: !!review };
+      }),
+    );
   }
 
   // Get availed (accepted) applications for an availer
   async getAvailedApplications(availerId: string) {
-    return this.prisma.application.findMany({
+    const applications = await this.prisma.application.findMany({
       where: {
-        applicant: { id: availerId },
-        status: "ACCEPTED",
-        serviceId: { not: null },
+        OR: [
+          {
+            applicantId: availerId,
+            status: "ACCEPTED",
+            serviceId: { not: null },
+          },
+          {
+            availRequest: { availerId: availerId },
+            status: "ACCEPTED",
+          },
+        ],
       },
       include: {
         service: {
@@ -234,7 +318,87 @@ export class ApplicationsService {
             provider: { select: { id: true, fullName: true, city: true } },
           },
         },
-        availRequest: true,
+        availRequest: {
+          include: {
+            availer: { select: { id: true, fullName: true, city: true } },
+          },
+        },
+        applicant: {
+          select: { id: true, fullName: true, city: true, role: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return Promise.all(
+      applications.map(async (app) => {
+        if (!app.isCompleted) return { ...app, reviewGiven: false };
+        const review = await this.prisma.review.findUnique({
+          where: { authorId_applicationId: { authorId: availerId, applicationId: app.id } },
+        });
+        return { ...app, reviewGiven: !!review };
+      }),
+    );
+  }
+
+  // Unified completion for any accepted application (availer marks it done)
+  async completeApplication(appId: string, userId: string) {
+    const app = await this.prisma.application.findFirst({
+      where: { id: appId },
+      include: { availRequest: true, service: true },
+    });
+    if (!app) throw new NotFoundException("Application not found");
+
+    // The availer is either the applicant (for Services) or the request owner (for Requests)
+    const availerId = app.serviceId
+      ? app.applicantId
+      : app.availRequest?.availerId;
+    if (availerId !== userId) throw new ForbiddenException("Access denied");
+
+    // Mark application itself as completed
+    await this.prisma.application.update({
+      where: { id: appId },
+      data: { isCompleted: true },
+    });
+
+    // If it's a request-based application, also mark the posting as completed
+    if (app.availRequestId) {
+      await this.prisma.availRequest.update({
+        where: { id: app.availRequestId },
+        data: { isCompleted: true },
+      });
+    }
+
+    // Notify the Provider (the other party)
+    const providerId = app.serviceId ? app.service.providerId : app.applicantId;
+
+    await this.notificationsService.create({
+      userId: providerId,
+      title: "Task Completed",
+      message: `The client has marked the task "${app.serviceId ? app.service.title : app.availRequest.title}" as completed. You can ahora see it in your completed history.`,
+    });
+
+    return { message: "Task marked as completed" };
+  }
+
+  // Get purely pending applications submitted by a user
+  async getMyAppliedJobs(userId: string) {
+    return this.prisma.application.findMany({
+      where: {
+        applicantId: userId,
+        status: "PENDING",
+      },
+      include: {
+        availRequest: {
+          include: {
+            availer: { select: { id: true, fullName: true, city: true } },
+          },
+        },
+        service: {
+          include: {
+            provider: { select: { id: true, fullName: true, city: true } },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });

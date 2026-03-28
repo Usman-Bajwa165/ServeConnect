@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import axios from '@/lib/axios';
+import axiosInstance from '@/lib/axios';
+import { isCancel } from 'axios';
 
 interface UseAiSuggestionProps {
-  type: 'description' | 'continuation';
+  type: 'description' | 'continuation' | 'grammar';
   text: string;
   title?: string;
   enabled?: boolean;
@@ -10,11 +11,11 @@ interface UseAiSuggestionProps {
 
 export function useAiSuggestion({ type, text, title, enabled = true }: UseAiSuggestionProps) {
   const [suggestion, setSuggestion] = useState('');
-  const [isInjecting, setIsInjecting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (!enabled || !text.trim()) {
+    if (!enabled || (type !== 'description' && !text.trim())) {
       setSuggestion('');
       return;
     }
@@ -26,23 +27,29 @@ export function useAiSuggestion({ type, text, title, enabled = true }: UseAiSugg
     abortControllerRef.current = new AbortController();
 
     const fetchSuggestion = async () => {
+      setIsLoading(true);
       try {
-        const res = await axios.post(
+        const res = await axiosInstance.post(
           '/ai/suggest',
           { type, text, title },
           { signal: abortControllerRef.current?.signal }
         );
-        const newSuggestion = res.data?.data?.suggestion || '';
+        const newSuggestion = (res.data?.data?.suggestion || '').trim();
         
         // Prevent duplicate ghost text if user already typed it
-        if (newSuggestion && !text.endsWith(newSuggestion)) {
+        if (newSuggestion && !text.trim().endsWith(newSuggestion)) {
           setSuggestion(newSuggestion);
         } else {
           setSuggestion('');
         }
       } catch (err) {
-        if (!axios.isCancel(err)) {
+        if (!isCancel(err)) {
           setSuggestion('');
+        }
+      } finally {
+        // Only set loading false if this was the latest request
+        if (!abortControllerRef.current?.signal.aborted) {
+          setIsLoading(false);
         }
       }
     };
@@ -56,12 +63,13 @@ export function useAiSuggestion({ type, text, title, enabled = true }: UseAiSugg
 
   const acceptSuggestion = () => {
     if (!suggestion) return text;
-    const result = `${text} ${suggestion}`.replace(/\s+/g, ' ');
+    // Ensure we don't add redundant words if user keeps typing
+    const result = `${text.trim()} ${suggestion}`.replace(/\s+/g, ' ');
     setSuggestion('');
     return result;
   };
 
   const clearSuggestion = () => setSuggestion('');
 
-  return { suggestion, acceptSuggestion, clearSuggestion };
+  return { suggestion, acceptSuggestion, clearSuggestion, isLoading };
 }

@@ -4,6 +4,9 @@ export class CreateReviewDto {
   @IsUUID()
   targetId: string;
 
+  @IsUUID()
+  applicationId: string;
+
   @IsInt()
   @Min(1)
   @Max(5)

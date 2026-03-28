@@ -38,6 +38,18 @@ model User {
   applicationsGiven Application[]  @relation("ApplicantUser")
   reviewsGiven      Review[]       @relation("ReviewAuthor")
   reviewsReceived   Review[]       @relation("ReviewTarget")
+  notifications     Notification[] @relation("UserNotifications")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation("UserNotifications", fields: [userId], references: [id])
 }
 
 model Service {
@@ -79,6 +91,7 @@ model Application {
   note          String
   contactNumber String
   status        ApplicationStatus @default(PENDING)
+  isCompleted   Boolean           @default(false)
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
@@ -90,6 +103,8 @@ model Application {
 
   availRequestId String?
   availRequest   AvailRequest? @relation("AvailRequestApplications", fields: [availRequestId], references: [id])
+
+  reviews Review[]
 }
 
 model Review {
@@ -104,5 +119,8 @@ model Review {
   targetId String
   target   User   @relation("ReviewTarget", fields: [targetId], references: [id])
 
-  @@unique([authorId, targetId])
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+
+  @@unique([authorId, applicationId])
 }

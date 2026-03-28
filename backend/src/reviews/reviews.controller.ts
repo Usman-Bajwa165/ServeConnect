@@ -13,7 +13,7 @@ export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
   @Post()
-  @Roles(Role.SERVICE_AVAILER)
+  @Roles(Role.SERVICE_AVAILER, Role.SERVICE_PROVIDER)
   createReview(@CurrentUser() user: any, @Body() dto: CreateReviewDto) {
     return this.reviewsService.createReview(user.id, dto);
   }

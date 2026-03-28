@@ -7,6 +7,10 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  const isAiSuggest = config.url?.includes('/ai/suggest');
+  if (typeof window !== 'undefined' && !isAiSuggest) {
+    window.dispatchEvent(new CustomEvent('start-loading'));
+  }
   const token = Cookies.get('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -15,8 +19,18 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const isAiSuggest = response.config.url?.includes('/ai/suggest');
+    if (typeof window !== 'undefined' && !isAiSuggest) {
+      window.dispatchEvent(new CustomEvent('stop-loading'));
+    }
+    return response;
+  },
   (error) => {
+    const isAiSuggest = error.config?.url?.includes('/ai/suggest');
+    if (typeof window !== 'undefined' && !isAiSuggest) {
+      window.dispatchEvent(new CustomEvent('stop-loading'));
+    }
     if (error.response?.status === 401) {
       Cookies.remove('token');
       Cookies.remove('user');

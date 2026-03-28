@@ -74,8 +74,11 @@ export default function RequestApplicationsPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="mb-8">
+    <DashboardLayout
+      title="Review Applicants"
+      subtitle={`Review and select the best professional for your request "${requestItem?.title}".`}
+    >
+      <div className="mb-6">
         <button
           onClick={() => router.back()}
           className="text-gray-500 hover:text-gray-800 flex items-center gap-1 font-medium transition-colors mb-4"
@@ -95,13 +98,6 @@ export default function RequestApplicationsPage() {
           </svg>
           Back to My Requests
         </button>
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-          Review Applicants
-        </h1>
-        <p className="mt-2 text-gray-600">
-          Review and select the best professional for your request{" "}
-          {`"${requestItem?.title}"`}.
-        </p>
       </div>
 
       {loading ? (

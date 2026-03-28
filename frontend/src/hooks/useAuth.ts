@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { AuthUser, getUser, getToken, clearAuth } from '@/lib/auth';
 import axios from '@/lib/axios';
 import { useRouter } from 'next/navigation';
+import { startGlobalLoading } from '@/lib/events';
 
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -22,14 +23,14 @@ export function useAuth() {
   }, []);
 
   const logout = async () => {
+    startGlobalLoading();
+    clearAuth();
+    setUser(null);
+    router.push('/login');
     try {
       await axios.post('/auth/logout');
     } catch (e) {
-      // Ignored
-    } finally {
-      clearAuth();
-      setUser(null);
-      router.push('/login');
+      // ignored
     }
   };
 

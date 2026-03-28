@@ -41,8 +41,11 @@ export default function AdminServicesPage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="mb-8">
+    <DashboardLayout
+      title="Service Moderation"
+      subtitle="Manage and moderate all services"
+    >
+      <div className="mb-6">
         <Link
           href="/admin/dashboard"
           className="text-gray-500 hover:text-gray-800 flex items-center gap-1 font-medium transition-colors mb-4"
@@ -62,9 +65,6 @@ export default function AdminServicesPage() {
           </svg>
           Back to Dashboard
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-          Service Moderation
-        </h1>
       </div>
 
       {loading ? (

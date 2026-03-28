@@ -18,10 +18,14 @@ export class AvailRequestsService {
     const where: any = { isDeleted: false, isReserved: false };
 
     if (search) {
-      where.title = { contains: search, mode: "insensitive" };
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+        { location: { contains: search, mode: "insensitive" } },
+      ];
     }
     if (city) {
-      where.location = city;
+      where.location = { contains: city, mode: "insensitive" };
     }
 
     const [data, total] = await Promise.all([

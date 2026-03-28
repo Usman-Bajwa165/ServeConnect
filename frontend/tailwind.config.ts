@@ -34,6 +34,7 @@ module.exports = {
         'fade-in': 'fadeIn 0.3s ease-in-out',
         'slide-up': 'slideUp 0.4s ease-out',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'loading-bar': 'expand 1s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -43,6 +44,11 @@ module.exports = {
         slideUp: {
           '0%': { transform: 'translateY(20px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        expand: {
+          '0%': { width: '0%', left: '0%' },
+          '50%': { width: '70%', left: '15%' },
+          '100%': { width: '100%', left: '0%' },
         },
       },
     },

@@ -15,7 +15,10 @@ export class ServicesService {
     const where: any = { isDeleted: false };
 
     if (search) {
-      where.title = { contains: search, mode: "insensitive" };
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ];
     }
     if (city) {
       where.location = city;
@@ -124,6 +127,11 @@ export class ServicesService {
   async getMyServices(providerId: string) {
     return this.prisma.service.findMany({
       where: { providerId, isDeleted: false },
+      include: {
+        _count: {
+          select: { applications: { where: { status: "PENDING" } } },
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
   }

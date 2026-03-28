@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   BadRequestException,
   ConflictException,
+  NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateReviewDto } from "./dto/review.dto";
@@ -12,36 +13,48 @@ export class ReviewsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createReview(authorId: string, dto: CreateReviewDto) {
-    // Check author is an availer (already guarded, but double-check target is a provider)
-    const target = await this.prisma.user.findUnique({
-      where: { id: dto.targetId },
-    });
-    if (!target || target.role !== "SERVICE_PROVIDER") {
-      throw new BadRequestException("You can only review Service Providers");
-    }
-
-    // Check they had an accepted application together
-    const acceptedApp = await this.prisma.application.findFirst({
-      where: {
-        applicantId: authorId,
-        status: "ACCEPTED",
-        service: { providerId: dto.targetId },
+    // Load the application with all relations
+    const app = await this.prisma.application.findUnique({
+      where: { id: dto.applicationId },
+      include: {
+        service: { include: { provider: true } },
+        availRequest: { include: { availer: true } },
+        applicant: true,
       },
     });
 
-    if (!acceptedApp) {
-      throw new ForbiddenException(
-        "You can only review providers you have had an accepted application with",
-      );
+    if (!app) throw new NotFoundException("Application not found");
+    if (!app.isCompleted)
+      throw new ForbiddenException("Job must be completed before reviewing");
+    if (app.status !== "ACCEPTED")
+      throw new ForbiddenException("Can only review on accepted applications");
+
+    // Determine the two parties: provider and availer
+    const isServiceJob = !!app.serviceId;
+    const providerId = isServiceJob
+      ? app.service.provider.id
+      : app.applicantId;
+    const availerId = isServiceJob
+      ? app.applicantId
+      : app.availRequest.availerId;
+
+    // Author must be one of the two parties
+    if (authorId !== providerId && authorId !== availerId) {
+      throw new ForbiddenException("You were not part of this job");
     }
 
-    // Check unique constraint (will throw P2002 if already reviewed)
-    const existingReview = await this.prisma.review.findUnique({
-      where: { authorId_targetId: { authorId, targetId: dto.targetId } },
-    });
-    if (existingReview) {
-      throw new ConflictException("You have already reviewed this provider");
+    // Target must be the other party
+    const expectedTargetId =
+      authorId === providerId ? availerId : providerId;
+    if (dto.targetId !== expectedTargetId) {
+      throw new BadRequestException("Invalid review target for this job");
     }
+
+    // One review per author per application
+    const existing = await this.prisma.review.findUnique({
+      where: { authorId_applicationId: { authorId, applicationId: dto.applicationId } },
+    });
+    if (existing) throw new ConflictException("You have already reviewed this job");
 
     return this.prisma.review.create({
       data: {
@@ -49,6 +62,7 @@ export class ReviewsService {
         comment: dto.comment,
         authorId,
         targetId: dto.targetId,
+        applicationId: dto.applicationId,
       },
       include: {
         author: { select: { id: true, fullName: true } },

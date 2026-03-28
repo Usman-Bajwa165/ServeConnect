@@ -16,6 +16,7 @@ export default function ProviderProfilePage() {
   const [provider, setProvider] = useState<any>(null);
   const [activeService, setActiveService] = useState<any>(null);
   const [successMsg, setSuccessMsg] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const fetchProfile = async () => {
     try {
@@ -27,6 +28,13 @@ export default function ProviderProfilePage() {
   };
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        setCurrentUserId(payload.sub);
+      } catch (e) {}
+    }
     fetchProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -165,61 +173,75 @@ export default function ProviderProfilePage() {
               </div>
             ) : (
               <div className="grid gap-6">
-                {provider.providerServices.map((service: any) => (
-                  <Card
-                    key={service.id}
-                    className="hover:border-brand-300 transition-colors border border-gray-200"
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 mb-4">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-gray-900 mb-2">
-                            {service.title}
-                          </h3>
-                          <p className="text-gray-600 mb-4 whitespace-pre-wrap leading-relaxed">
-                            {service.description}
-                          </p>
-                          <div className="flex flex-wrap gap-2 text-sm font-medium">
-                            <Badge
-                              variant="success"
-                              className="bg-green-100 text-green-800 px-3 py-1 font-semibold rounded-lg shadow-sm"
-                            >
-                              ₨ {Number(service.price).toLocaleString()}
-                            </Badge>
-                            <Badge className="bg-gray-100 text-gray-700 px-3 py-1 font-medium rounded-lg flex items-center gap-1 border-gray-200">
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
+                {provider.providerServices.map((service: any) => {
+                  const hasApplied = service.applications?.some(
+                    (app: any) => app.applicantId === currentUserId,
+                  );
+                  return (
+                    <Card
+                      key={service.id}
+                      className="hover:border-brand-300 transition-colors border border-gray-200"
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 mb-4">
+                          <div className="flex-1">
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">
+                              {service.title}
+                            </h3>
+                            <p className="text-gray-600 mb-4 whitespace-pre-wrap leading-relaxed">
+                              {service.description}
+                            </p>
+                            <div className="flex flex-wrap gap-2 text-sm font-medium">
+                              <Badge
+                                variant="success"
+                                className="bg-green-100 text-green-800 px-3 py-1 font-semibold rounded-lg shadow-sm"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                />
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                />
-                              </svg>
-                              {service.location}
-                            </Badge>
+                                ₨ {Number(service.price).toLocaleString()}
+                              </Badge>
+                              <Badge className="bg-gray-100 text-gray-700 px-3 py-1 font-medium rounded-lg flex items-center gap-1 border-gray-200">
+                                <svg
+                                  className="w-3.5 h-3.5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                  />
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                  />
+                                </svg>
+                                {service.location}
+                              </Badge>
+                            </div>
                           </div>
+                          {hasApplied ? (
+                            <button
+                              disabled
+                              className="bg-gray-400 text-white font-medium px-6 py-2.5 rounded-lg w-full sm:w-auto text-center cursor-not-allowed"
+                            >
+                              Applied
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setActiveService(service)}
+                              className="bg-brand-600 text-white font-medium px-6 py-2.5 rounded-lg hover:bg-brand-700 hover:shadow-lg transition-all transform hover:-translate-y-0.5 whitespace-nowrap active:bg-brand-800 focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 w-full sm:w-auto text-center"
+                            >
+                              Apply Now
+                            </button>
+                          )}
                         </div>
-                        <button
-                          onClick={() => setActiveService(service)}
-                          className="bg-brand-600 text-white font-medium px-6 py-2.5 rounded-lg hover:bg-brand-700 hover:shadow-lg transition-all transform hover:-translate-y-0.5 whitespace-nowrap active:bg-brand-800 focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 w-full sm:w-auto text-center"
-                        >
-                          Apply Now
-                        </button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </div>

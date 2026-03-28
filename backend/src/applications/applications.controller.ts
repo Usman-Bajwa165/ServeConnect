@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Param, Body, UseGuards } from "@nestjs/common";
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Param,
+  Body,
+  UseGuards,
+} from "@nestjs/common";
 import { ApplicationsService } from "./applications.service";
 import { ApplyDto } from "./dto/apply.dto";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
@@ -110,6 +118,19 @@ export class ApplicationsController {
   @Roles(Role.SERVICE_PROVIDER)
   getPendingJobs(@CurrentUser() user: any) {
     return this.applicationsService.getProviderPendingJobs(user.id);
+  }
+
+  @Patch("applications/:id/complete")
+  @Roles(Role.SERVICE_AVAILER)
+  completeApplication(@Param("id") id: string, @CurrentUser() user: any) {
+    return this.applicationsService.completeApplication(id, user.id);
+  }
+
+  // Generic endpoint for user to get all their own PENDING applications
+  @Get("applications/applied")
+  @Roles(Role.SERVICE_PROVIDER, Role.SERVICE_AVAILER)
+  getMyAppliedJobs(@CurrentUser() user: any) {
+    return this.applicationsService.getMyAppliedJobs(user.id);
   }
 
   // Availer's accepted/availed list

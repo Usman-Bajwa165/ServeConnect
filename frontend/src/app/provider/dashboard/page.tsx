@@ -7,6 +7,7 @@ import { ProviderNavTabs } from '@/components/layout/ProviderNavTabs';
 import { SearchBar } from '@/components/search/SearchBar';
 import { CityFilter } from '@/components/search/CityFilter';
 import { Card, CardContent } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ApplyModal } from '@/components/applications/ApplyModal';
 import axios from '@/lib/axios';
@@ -21,13 +22,17 @@ export default function ProviderDashboard() {
   const [activeRequest, setActiveRequest] = useState<any>(null);
   const [successMsg, setSuccessMsg] = useState('');
 
+  const [stats, setStats] = useState<any>(null);
+
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('/avail-requests', {
-        params: { search, city }
-      });
-      setRequests(res.data.data.data);
+      const [requestsRes, statsRes] = await Promise.all([
+        axios.get('/avail-requests', { params: { search, city } }),
+        axios.get('/users/me/stats')
+      ]);
+      setRequests(requestsRes.data.data.data);
+      setStats(statsRes.data.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -41,10 +46,27 @@ export default function ProviderDashboard() {
   }, [city]);
 
   return (
-    <DashboardLayout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Provider Dashboard</h1>
-        <p className="mt-2 text-gray-600">Browse and apply to service requests posted by users.</p>
+    <DashboardLayout 
+      title="Provider Dashboard"
+      subtitle="Find and apply for premium jobs today."
+    >
+      <div className="w-full h-full p-6 lg:p-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+        {[
+          { label: 'Available Jobs', val: stats?.availableJobs ?? '...', icon: <path d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /> },
+          { label: 'Apps Sent', val: stats?.appsSent ?? '...', icon: <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /> },
+          { label: 'My Services Owned', val: stats?.myServices ?? '...', icon: <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /> }
+        ].map((stat, i) => (
+          <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow group cursor-default">
+            <div className="w-12 h-12 rounded-xl bg-accent-50 flex items-center justify-center text-accent-600 group-hover:scale-110 transition-transform">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>{stat.icon}</svg>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">{stat.label}</p>
+              <p className="text-2xl font-black text-gray-900 leading-none">{stat.val}</p>
+            </div>
+          </div>
+        ))}
       </div>
 
       <ProviderNavTabs />
@@ -137,6 +159,7 @@ export default function ProviderDashboard() {
           }}
         />
       )}
+      </div>
     </DashboardLayout>
   );
 }
