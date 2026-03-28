@@ -6,10 +6,12 @@ import Link from 'next/link';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import axios from '@/lib/axios';
-import { setAuth, getDashboardPath } from '@/lib/auth';
+import { useAuth } from '@/hooks/useAuth';
+import { getDashboardPath } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -31,9 +33,7 @@ export default function LoginPage() {
     try {
       const res = await axios.post('/auth/login', formData);
       const { user, access_token } = res.data.data;
-      
-      setAuth(access_token, user);
-      
+      login(access_token, user);
       router.push(getDashboardPath(user.role));
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to log in. Please check your credentials.');

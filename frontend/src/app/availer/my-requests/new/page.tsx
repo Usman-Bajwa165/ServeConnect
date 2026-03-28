@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { AiSuggestionInput } from '@/components/ai/AiSuggestionInput';
@@ -74,12 +73,11 @@ export default function NewRequestPage() {
   };
 
   return (
-    <DashboardLayout 
-      title="Post New Request" 
-      subtitle="Post a job so professionals can help you"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in"
+      onClick={(e) => { if (e.target === e.currentTarget) router.back(); }}
     >
-      <div className="max-w-3xl mx-auto py-12 px-6">
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 pt-12 relative overflow-hidden animate-slide-up">
+      <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 pt-12 relative overflow-hidden animate-slide-up max-h-[90vh] overflow-y-auto">
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-500 to-accent-500"></div>
 
           <button 
@@ -171,7 +169,6 @@ export default function NewRequestPage() {
             </div>
           </form>
         </div>
-      </div>
-    </DashboardLayout>
+    </div>
   );
 }

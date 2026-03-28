@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AiSuggestionInput } from "@/components/ai/AiSuggestionInput";
@@ -84,12 +83,11 @@ export default function NewServicePage() {
   };
 
   return (
-    <DashboardLayout
-      title="Add New Service"
-      subtitle="Offer your skills to the community"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in"
+      onClick={(e) => { if (e.target === e.currentTarget) router.back(); }}
     >
-      <div className="max-w-3xl mx-auto py-12 px-6">
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 pt-12 relative overflow-hidden animate-slide-up">
+      <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 pt-12 relative overflow-hidden animate-slide-up max-h-[90vh] overflow-y-auto">
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-500 to-accent-500"></div>
 
           <button
@@ -166,7 +164,7 @@ export default function NewServicePage() {
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         ></path>
                       </svg>
-                      AI Checking Grammar...
+                      AI is refining prompt...
                     </div>
                   )}
                 </div>
@@ -208,38 +206,15 @@ export default function NewServicePage() {
                 <label className="text-sm font-medium text-gray-700">
                   Location
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-brand-500">
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                  </div>
-                  <SearchableSelect
-                    options={PAKISTAN_CITIES}
-                    value={formData.location}
-                    onChange={(val) =>
-                      setFormData({ ...formData, location: val })
-                    }
-                    placeholder="Search and select a city..."
-                    name="location"
-                  />
-                </div>
+                <SearchableSelect
+                  options={PAKISTAN_CITIES}
+                  value={formData.location}
+                  onChange={(val) =>
+                    setFormData({ ...formData, location: val })
+                  }
+                  placeholder="Search and select a city..."
+                  name="location"
+                />
               </div>
             </div>
 
@@ -262,7 +237,6 @@ export default function NewServicePage() {
             </div>
           </form>
         </div>
-      </div>
-    </DashboardLayout>
+    </div>
   );
 }

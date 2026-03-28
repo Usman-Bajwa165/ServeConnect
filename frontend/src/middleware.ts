@@ -23,7 +23,9 @@ export async function middleware(request: NextRequest) {
       const role = payload.role as string;
 
       // If on public path but logged in, redirect to dashboard
-      if (isPublicPath) {
+      // Skip this redirect for client-side navigations (e.g. after logout clears cookie race)
+      const isClientNav = request.headers.get('next-router-prefetch') || request.headers.get('rsc');
+      if (isPublicPath && !isClientNav) {
         if (role === 'SERVICE_PROVIDER') return NextResponse.redirect(new URL('/provider/dashboard', request.url));
         if (role === 'SERVICE_AVAILER') return NextResponse.redirect(new URL('/availer/dashboard', request.url));
         if (role === 'ADMIN') return NextResponse.redirect(new URL('/admin/dashboard', request.url));

@@ -17,7 +17,7 @@ export const NotificationBell = () => {
         axios.get("/notifications/unread/count"),
       ]);
       setNotifications(notifsRes.data.data);
-      setUnreadCount(countRes.data.count);
+      setUnreadCount(countRes.data.data.count);
     } catch (err) {
       console.error("Failed to fetch notifications", err);
     }

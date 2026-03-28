@@ -126,6 +126,26 @@ export class ApplicationsController {
     return this.applicationsService.completeApplication(id, user.id);
   }
 
+  @Get("applications/pending-counts")
+  @Roles(Role.SERVICE_PROVIDER, Role.SERVICE_AVAILER)
+  getPendingCounts(@CurrentUser() user: any) {
+    return this.applicationsService.getPendingCounts(user.id, user.role);
+  }
+
+  // Get all avail-request applications by this provider (any status)
+  @Get("applications/my-availrequest-apps")
+  @Roles(Role.SERVICE_PROVIDER)
+  getMyAvailRequestApplications(@CurrentUser() user: any) {
+    return this.applicationsService.getMyAvailRequestApplications(user.id);
+  }
+
+  // Get all service applications by this availer (any status)
+  @Get("applications/my-service-apps")
+  @Roles(Role.SERVICE_AVAILER)
+  getMyServiceApplications(@CurrentUser() user: any) {
+    return this.applicationsService.getMyServiceApplications(user.id);
+  }
+
   // Generic endpoint for user to get all their own PENDING applications
   @Get("applications/applied")
   @Roles(Role.SERVICE_PROVIDER, Role.SERVICE_AVAILER)

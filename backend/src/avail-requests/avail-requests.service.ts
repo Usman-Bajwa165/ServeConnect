@@ -91,6 +91,11 @@ export class AvailRequestsService {
   async getMyRequests(availerId: string) {
     return this.prisma.availRequest.findMany({
       where: { availerId, isDeleted: false },
+      include: {
+        _count: {
+          select: { applications: { where: { status: "PENDING" } } },
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
   }

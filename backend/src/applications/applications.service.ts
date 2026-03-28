@@ -381,6 +381,39 @@ export class ApplicationsService {
     return { message: "Task marked as completed" };
   }
 
+  // Pending applicant counts for nav dot indicators
+  async getPendingCounts(userId: string, role: string) {
+    if (role === 'SERVICE_PROVIDER') {
+      const count = await this.prisma.application.count({
+        where: { service: { providerId: userId }, status: 'PENDING' },
+      });
+      return { myItemsPending: count };
+    }
+    if (role === 'SERVICE_AVAILER') {
+      const count = await this.prisma.application.count({
+        where: { availRequest: { availerId: userId }, status: 'PENDING' },
+      });
+      return { myItemsPending: count };
+    }
+    return { myItemsPending: 0 };
+  }
+
+  // Get all avail-request applications by this provider (any status) — used to hide applied requests in browse
+  async getMyAvailRequestApplications(providerId: string) {
+    return this.prisma.application.findMany({
+      where: { applicantId: providerId, availRequestId: { not: null } },
+      select: { availRequestId: true },
+    });
+  }
+
+  // Get all service applications by this availer (any status) — used to hide applied services in browse
+  async getMyServiceApplications(availerId: string) {
+    return this.prisma.application.findMany({
+      where: { applicantId: availerId, serviceId: { not: null } },
+      select: { serviceId: true },
+    });
+  }
+
   // Get purely pending applications submitted by a user
   async getMyAppliedJobs(userId: string) {
     return this.prisma.application.findMany({

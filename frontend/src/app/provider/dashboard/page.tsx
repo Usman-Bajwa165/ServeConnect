@@ -1,49 +1,51 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { ProviderNavTabs } from '@/components/layout/ProviderNavTabs';
 import { SearchBar } from '@/components/search/SearchBar';
 import { CityFilter } from '@/components/search/CityFilter';
 import { Card, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ApplyModal } from '@/components/applications/ApplyModal';
 import axios from '@/lib/axios';
+import { useDebounce } from '@/hooks/useDebounce';
 
 export default function ProviderDashboard() {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
   const [search, setSearch] = useState('');
   const [city, setCity] = useState('');
-  
   const [activeRequest, setActiveRequest] = useState<any>(null);
-  const [successMsg, setSuccessMsg] = useState('');
-
   const [stats, setStats] = useState<any>(null);
 
-  const fetchRequests = async () => {
+  const debouncedSearch = useDebounce(search, 400);
+
+  const fetchRequests = useCallback(async () => {
     setLoading(true);
     try {
-      const [requestsRes, statsRes] = await Promise.all([
-        axios.get('/avail-requests', { params: { search, city } }),
-        axios.get('/users/me/stats')
+      const [requestsRes, appliedRes, statsRes] = await Promise.all([
+        axios.get('/avail-requests', { params: { search: debouncedSearch, city } }),
+        axios.get('/applications/my-availrequest-apps'),
+        axios.get('/users/me/stats'),
       ]);
-      setRequests(requestsRes.data.data.data);
+
+      const allRequests: any[] = requestsRes.data.data.data;
+      const applied: any[] = appliedRes.data.data;
+      const appliedIds = new Set<string>(applied.map((a: any) => a.availRequestId).filter(Boolean));
+
+      setRequests(allRequests.filter((r: any) => !appliedIds.has(r.id)));
       setStats(statsRes.data.data);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [debouncedSearch, city]);
 
   useEffect(() => {
     fetchRequests();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [city]);
+  }, [fetchRequests]);
 
   return (
     <DashboardLayout 
@@ -78,19 +80,15 @@ export default function ProviderDashboard() {
         <div className="w-full sm:w-64">
           <CityFilter value={city} onChange={setCity} />
         </div>
-        <button 
-          onClick={fetchRequests}
-          className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-medium whitespace-nowrap shadow-sm hover:shadow"
-        >
-          Search
-        </button>
+        {(search || city) && (
+          <button
+            onClick={() => { setSearch(''); setCity(''); }}
+            className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 whitespace-nowrap"
+          >
+            Clear
+          </button>
+        )}
       </div>
-
-      {successMsg && (
-        <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-md shadow-sm">
-          <p className="text-green-800 font-medium">{successMsg}</p>
-        </div>
-      )}
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -154,8 +152,8 @@ export default function ProviderDashboard() {
           targetTitle={activeRequest.title}
           type="avail-request"
           onSuccess={() => {
-            setSuccessMsg(`Successfully applied to "${activeRequest.title}". Check Pending Jobs to monitor status.`);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setActiveRequest(null);
+            fetchRequests();
           }}
         />
       )}

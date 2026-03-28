@@ -180,9 +180,14 @@ export default function MyRequestsPage() {
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/availer/my-requests/${req.id}/applications`}
-                            className="text-brand-600 bg-brand-50 hover:bg-brand-100 font-medium px-4 py-2 rounded-lg text-sm transition-colors border border-brand-100"
+                            className="relative text-brand-600 bg-brand-50 hover:bg-brand-100 font-medium px-4 py-2 rounded-lg text-sm transition-colors border border-brand-100"
                           >
                             View Applicants
+                            {req._count?.applications > 0 && (
+                              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
+                                {req._count.applications}
+                              </span>
+                            )}
                           </Link>
                           <button
                             onClick={() => handleDelete(req.id, req.title)}

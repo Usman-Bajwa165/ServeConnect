@@ -2,7 +2,7 @@ import {
   Controller,
   Get,
   Post,
-  Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -51,7 +51,7 @@ export class ServicesController {
     return this.servicesService.create(user.id, dto);
   }
 
-  @Put(":id")
+  @Patch(":id")
   @Roles(Role.SERVICE_PROVIDER)
   update(
     @Param("id") id: string,
