@@ -202,7 +202,12 @@ export class UsersService {
         include: { target: { select: { id: true, fullName: true } } },
         orderBy: { createdAt: "desc" },
       });
-      return { completedRequests, reviewsGiven };
+      const reviewsReceived = await this.prisma.review.findMany({
+        where: { targetId: userId },
+        include: { author: { select: { id: true, fullName: true, city: true } } },
+        orderBy: { createdAt: "desc" },
+      });
+      return { completedRequests, reviewsGiven, reviewsReceived };
     }
 
     return {};

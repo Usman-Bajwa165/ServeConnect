@@ -46,6 +46,10 @@ export default function AvailerProfilePage() {
                   <p className="text-2xl font-black text-brand-600">{data.reviewsGiven.length}</p>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Reviews Given</p>
                 </div>
+                <div>
+                  <p className="text-2xl font-black text-brand-600">{(data.reviewsReceived || []).length}</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Reviews Received</p>
+                </div>
               </div>
             )}
           </div>
@@ -117,6 +121,45 @@ export default function AvailerProfilePage() {
                             <div>
                               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-none mb-0.5">Provider</p>
                               <p className="font-bold text-gray-900 text-sm">{r.target.fullName}</p>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <StarRating rating={r.rating} />
+                            <span className="text-[10px] text-gray-400">
+                              {new Date(r.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 italic bg-gray-50 p-3 rounded-lg border border-gray-100">
+                          "{r.comment}"
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Reviews Received */}
+              <div>
+                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
+                  Reviews Received ({(data.reviewsReceived || []).length})
+                </h3>
+                {(data.reviewsReceived || []).length === 0 ? (
+                  <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-200 text-gray-400 text-sm">
+                    No reviews received yet.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {data.reviewsReceived.map((r: any) => (
+                      <div key={r.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm">
+                              {r.author.fullName.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-none mb-0.5">Provider</p>
+                              <p className="font-bold text-gray-900 text-sm">{r.author.fullName}</p>
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-1">

@@ -177,8 +177,16 @@ export default function AvailerDashboard() {
 
                   {/* Apply button */}
                   {service._appStatus === "ACCEPTED" ? (
-                    <div className="w-full py-2.5 bg-green-50 border border-green-200 text-green-700 font-semibold rounded-lg text-sm text-center">
-                      ✓ Availed
+                    <div className="flex flex-col gap-2">
+                      <div className="w-full py-1.5 bg-green-50 border border-green-200 text-green-700 font-semibold rounded-lg text-xs text-center">
+                        ✓ Previously Availed
+                      </div>
+                      <button
+                        onClick={() => setActiveService(service)}
+                        className="w-full py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg transition-all shadow-sm hover:shadow-md active:scale-[0.98] text-sm"
+                      >
+                        Avail Again
+                      </button>
                     </div>
                   ) : (
                     <button
