@@ -1,10 +1,6 @@
-import { IsString, IsIn, IsOptional } from "class-validator";
+import { IsString, IsOptional } from "class-validator";
 
 export class AiSuggestDto {
-  @IsString()
-  @IsIn(["description", "continuation", "grammar"])
-  type: "description" | "continuation" | "grammar";
-
   @IsString()
   text: string;
 

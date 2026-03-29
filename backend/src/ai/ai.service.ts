@@ -18,84 +18,72 @@ export class AiService {
     this.model = process.env.OLLAMA_MODEL || "llama3.2:1b";
   }
 
-  private buildOllamaMessages(dto: AiSuggestDto): any[] {
-    if (dto.type === "description") {
-      return [
-        {
-          role: "system",
-          content:
-            "You are a professional copywriter. Write a concise 2-sentence service description. Output ONLY the description text. No labels, no explanations, no quotes.",
-        },
-        { role: "user", content: `Service: ${dto.title || dto.text}` },
-      ];
-    }
-    if (dto.type === "grammar") {
-      return [
-        {
-          role: "system",
-          content:
-            "You are a spell checker and grammar fixer. The user will send you a text. You must return that exact text with only spelling mistakes, grammar errors, and punctuation fixed. Do NOT rephrase, do NOT add anything, do NOT remove anything, do NOT explain. Return ONLY the corrected refined version of original provided text.",
-        },
-        { role: "user", content: dto.text },
-      ];
-    }
-    // continuation
-    return [
+  async getSuggestion(dto: AiSuggestDto): Promise<{ suggestion: string }> {
+    const messages = [
       {
         role: "system",
         content:
-          "You are an autocomplete engine. Output ONLY the next 3-5 words that naturally continue the sentence. No labels, no explanations.",
+          "You are a text refinement tool. You receive a piece of text and you return ONLY a corrected version of that exact text — fixing spelling, grammar, and punctuation, and making it professional. You do NOT answer questions, you do NOT give advice, you do NOT add new information, you do NOT explain anything. You only return the refined version of the input text and nothing else.",
       },
       {
         role: "user",
-        content: `Topic: ${dto.title || "service"}\nSentence so far: ${dto.text}`,
+        content:
+          "i need plumer for my house pipe is leaking bad water evryware need fast",
+      },
+      {
+        role: "assistant",
+        content:
+          "I need a plumber for my house. The pipe is leaking badly and water is everywhere. Need someone urgently.",
+      },
+      {
+        role: "user",
+        content:
+          "gud electricin needed for wiring fixng in ofice all socket not working",
+      },
+      {
+        role: "assistant",
+        content:
+          "A good electrician is needed for wiring repair in the office. All sockets are not working.",
+      },
+      {
+        role: "user",
+        content: `${dto.title ? `Context: ${dto.title}\n` : ""}${dto.text}`,
       },
     ];
-  }
 
-  private buildOpenAiMessages(dto: AiSuggestDto): any[] {
-    return this.buildOllamaMessages(dto);
-  }
-
-  async getSuggestion(dto: AiSuggestDto): Promise<{ suggestion: string }> {
     try {
       const openaiKey = process.env.OPENAI_API_KEY;
-      let suggestion = "";
 
       if (openaiKey && !openaiKey.includes("your_openai_api_key")) {
         const response = await axios.post(
-          `https://api.openai.com/v1/chat/completions`,
-          {
-            model: "gpt-4o",
-            messages: this.buildOpenAiMessages(dto),
-            temperature: 0.3,
-          },
+          "https://api.openai.com/v1/chat/completions",
+          { model: "gpt-4o", messages, temperature: 0.2 },
           {
             headers: { Authorization: `Bearer ${openaiKey}` },
             timeout: 30000,
           },
         );
-        suggestion = (
+        const suggestion = (
           response.data?.choices?.[0]?.message?.content || ""
         ).trim();
-      } else {
-        this.logger.debug(`Calling Ollama chat with model ${this.model}`);
-        const response = await axios.post(
-          `${this.ollamaUrl}/api/chat`,
-          {
-            model: this.model,
-            stream: false,
-            messages: this.buildOllamaMessages(dto),
-            options: { temperature: 0.1, num_predict: 500 },
-          },
-          { timeout: 60000 },
-        );
-        suggestion = (response.data?.message?.content || "").trim();
+        return { suggestion };
       }
 
-      // Remove surrounding quotes if the model wrapped the output
-      suggestion = suggestion.replace(/^["|']+|["|']+$/g, "").trim();
-
+      this.logger.debug(`Calling Ollama chat with model ${this.model}`);
+      const response = await axios.post(
+        `${this.ollamaUrl}/api/chat`,
+        {
+          model: this.model,
+          stream: false,
+          messages,
+          options: { temperature: 0.1, num_predict: 200 },
+        },
+        { timeout: 90000 },
+      );
+      const suggestion = (response.data?.message?.content || "")
+        .trim()
+        .replace(/^["|']+|["|']+$/g, "")
+        .trim();
       return { suggestion };
     } catch (error: any) {
       this.logger.warn(`AI suggestion failed: ${error.message}`);

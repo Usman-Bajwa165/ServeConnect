@@ -66,8 +66,8 @@ export default function EditServicePage() {
     setIsFixingGrammar(true);
     try {
       const res = await axios.post("/ai/suggest", {
-        type: "grammar",
         text: formData.description,
+        title: formData.title,
       });
       if (res.data?.data?.suggestion) {
         setFormData((prev) => ({
@@ -76,7 +76,7 @@ export default function EditServicePage() {
         }));
       }
     } catch (err) {
-      console.warn("Grammar check failed");
+      console.warn("AI refine failed");
     } finally {
       setIsFixingGrammar(false);
     }
@@ -120,18 +120,8 @@ export default function EditServicePage() {
             className="absolute top-6 right-6 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all group shadow-sm bg-gray-50 border border-gray-100"
             title="Close"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2.5}
-                d="M6 18L18 6M6 6l12 12"
-              />
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
 
@@ -167,52 +157,25 @@ export default function EditServicePage() {
                       value={formData.description}
                       onChange={handleDescriptionChange}
                       onBlur={handleDescriptionBlur}
-                      contextType="description"
-                      titleContext={formData.title}
                       placeholder="Describe what you offer..."
                       required
                       className="min-h-[160px]"
                     />
                     {isFixingGrammar && (
                       <div className="absolute top-0 right-0 mt-1 mr-2 flex items-center gap-1.5 text-[10px] font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded border border-brand-100 animate-pulse">
-                        <svg
-                          className="w-3 h-3 animate-spin"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
+                        <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        AI Checking Grammar...
+                        AI is refining...
                       </div>
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                    <svg
-                      className="w-3 h-3 text-brand-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 10V3L4 14h7v7l9-11h-7z"
-                      />
+                    <svg className="w-3 h-3 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    Grammar checked automatically on exit.
+                    AI refines your description automatically on exit.
                   </p>
                 </div>
 
@@ -227,9 +190,7 @@ export default function EditServicePage() {
                     onChange={handleChange}
                     required
                     placeholder="0.00"
-                    icon={
-                      <span className="font-semibold text-gray-500">Rs</span>
-                    }
+                    icon={<span className="font-semibold text-gray-500">Rs</span>}
                   />
                 </div>
 
@@ -237,34 +198,23 @@ export default function EditServicePage() {
                   <label className="text-sm font-medium text-gray-700">
                     Location
                   </label>
-                  <div className="relative">
-                    <SearchableSelect
-                      options={PAKISTAN_CITIES}
-                      value={formData.location}
-                      onChange={(val) =>
-                        setFormData({ ...formData, location: val })
-                      }
-                      placeholder="Search and select a city..."
-                      name="location"
-                    />
-                  </div>
+                  <SearchableSelect
+                    options={PAKISTAN_CITIES}
+                    value={formData.location}
+                    onChange={(val) =>
+                      setFormData({ ...formData, location: val })
+                    }
+                    placeholder="Search and select a city..."
+                    name="location"
+                  />
                 </div>
               </div>
 
               <div className="pt-6 mt-6 border-t border-gray-100 flex justify-end gap-3">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => router.back()}
-                >
+                <Button type="button" variant="ghost" onClick={() => router.back()}>
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  isLoading={loading}
-                  size="lg"
-                  className="px-8 shadow-md"
-                >
+                <Button type="submit" isLoading={loading} size="lg" className="px-8 shadow-md">
                   Update Service
                 </Button>
               </div>
