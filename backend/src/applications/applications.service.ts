@@ -68,7 +68,9 @@ export class ApplicationsService {
       where: { serviceId, applicantId, status: "PENDING" },
     });
     if (existing)
-      throw new ConflictException("You already have a pending application for this service");
+      throw new ConflictException(
+        "You already have a pending application for this service",
+      );
 
     const app = await this.prisma.application.create({
       data: {
