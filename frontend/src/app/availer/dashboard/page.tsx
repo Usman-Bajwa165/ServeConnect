@@ -35,12 +35,19 @@ export default function AvailerDashboard() {
       const allServices: any[] = servicesRes.data.data.data;
       const applied: any[] = appliedRes.data.data;
 
-      // Build set of serviceIds the user already applied to
-      const ids = new Set<string>(
-        applied.map((a: any) => a.serviceId).filter(Boolean)
+      // Map serviceId -> application status for all apps this user submitted
+      const appStatusMap = new Map<string, string>();
+      applied.forEach((a: any) => {
+        if (a.serviceId) appStatusMap.set(a.serviceId, a.status);
+      });
+
+      // Only hide services where user has a PENDING application (already applied, awaiting response)
+      // Accepted/rejected services stay visible — accepted ones show "Availed" badge
+      setServices(
+        allServices
+          .filter((s: any) => appStatusMap.get(s.id) !== "PENDING")
+          .map((s: any) => ({ ...s, _appStatus: appStatusMap.get(s.id) || null }))
       );
-      // Filter out already-applied services from browse
-      setServices(allServices.filter((s: any) => !ids.has(s.id)));
       setStats(statsRes.data.data);
     } catch (err) {
       console.error(err);
@@ -169,12 +176,18 @@ export default function AvailerDashboard() {
                   </div>
 
                   {/* Apply button */}
-                  <button
-                    onClick={() => setActiveService(service)}
-                    className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg transition-all shadow-sm hover:shadow-md active:scale-[0.98] text-sm"
-                  >
-                    Apply Now
-                  </button>
+                  {service._appStatus === "ACCEPTED" ? (
+                    <div className="w-full py-2.5 bg-green-50 border border-green-200 text-green-700 font-semibold rounded-lg text-sm text-center">
+                      ✓ Availed
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setActiveService(service)}
+                      className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg transition-all shadow-sm hover:shadow-md active:scale-[0.98] text-sm"
+                    >
+                      Apply Now
+                    </button>
+                  )}
                 </CardContent>
               </Card>
             ))}

@@ -289,7 +289,12 @@ export class ApplicationsService {
       jobs.map(async (job) => {
         if (!job.isCompleted) return { ...job, reviewGiven: false };
         const review = await this.prisma.review.findUnique({
-          where: { authorId_applicationId: { authorId: providerId, applicationId: job.id } },
+          where: {
+            authorId_applicationId: {
+              authorId: providerId,
+              applicationId: job.id,
+            },
+          },
         });
         return { ...job, reviewGiven: !!review };
       }),
@@ -334,7 +339,12 @@ export class ApplicationsService {
       applications.map(async (app) => {
         if (!app.isCompleted) return { ...app, reviewGiven: false };
         const review = await this.prisma.review.findUnique({
-          where: { authorId_applicationId: { authorId: availerId, applicationId: app.id } },
+          where: {
+            authorId_applicationId: {
+              authorId: availerId,
+              applicationId: app.id,
+            },
+          },
         });
         return { ...app, reviewGiven: !!review };
       }),
@@ -383,15 +393,15 @@ export class ApplicationsService {
 
   // Pending applicant counts for nav dot indicators
   async getPendingCounts(userId: string, role: string) {
-    if (role === 'SERVICE_PROVIDER') {
+    if (role === "SERVICE_PROVIDER") {
       const count = await this.prisma.application.count({
-        where: { service: { providerId: userId }, status: 'PENDING' },
+        where: { service: { providerId: userId }, status: "PENDING" },
       });
       return { myItemsPending: count };
     }
-    if (role === 'SERVICE_AVAILER') {
+    if (role === "SERVICE_AVAILER") {
       const count = await this.prisma.application.count({
-        where: { availRequest: { availerId: userId }, status: 'PENDING' },
+        where: { availRequest: { availerId: userId }, status: "PENDING" },
       });
       return { myItemsPending: count };
     }
@@ -410,7 +420,7 @@ export class ApplicationsService {
   async getMyServiceApplications(availerId: string) {
     return this.prisma.application.findMany({
       where: { applicantId: availerId, serviceId: { not: null } },
-      select: { serviceId: true },
+      select: { serviceId: true, status: true },
     });
   }
 
